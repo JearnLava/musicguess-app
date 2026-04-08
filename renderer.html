@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+  <title>MusicGuess</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f0f23;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    #titlebar {
+      height: 42px;
+      min-height: 42px;
+      background: #13131f;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 14px;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.25);
+      position: relative;
+      z-index: 100;
+      user-select: none;
+    }
+
+    .tb-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .tb-logo {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tb-logo svg { display: block; }
+
+    .tb-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #c4b5fd;
+      letter-spacing: 0.2px;
+    }
+
+    .tb-title span { color: #7c7c9a; font-weight: 400; }
+
+    .tb-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      -webkit-app-region: no-drag;
+    }
+
+    #update-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(124, 58, 237, 0.12);
+      border: 1px solid rgba(124, 58, 237, 0.35);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11.5px;
+      color: #a78bfa;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    #update-pill.show { display: flex; }
+    #update-pill:hover { background: rgba(124, 58, 237, 0.22); }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #8b5cf6;
+      flex-shrink: 0;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    #dl-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #4f46e5);
+      transition: width 0.4s ease;
+      display: none;
+    }
+
+    #dl-bar.show { display: block; }
+
+    .tb-right {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      -webkit-app-region: no-drag;
+    }
+
+    .tb-sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255,255,255,0.08);
+      margin: 0 4px;
+    }
+
+    .tb-btn {
+      width: 34px;
+      height: 30px;
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      color: #6b7280;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, color 0.12s;
+      -webkit-app-region: no-drag;
+    }
+
+    .tb-btn:hover            { background: rgba(255,255,255,0.07); color: #d1d5db; }
+    .tb-btn.settings:hover   { background: rgba(124,58,237,0.18); color: #a78bfa; }
+    .tb-btn.win-close:hover  { background: rgba(239,68,68,0.18);  color: #f87171; }
+
+    webview {
+      flex: 1;
+      width: 100%;
+      border: none;
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+
+<div id="titlebar">
+
+  <div class="tb-left">
+    <div class="tb-logo">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M2 10V5.5C2 3.5 3.5 2 5.5 2C7.5 2 9 3.5 9 5.5V9" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="9.5" cy="10" r="1.5" stroke="white" stroke-width="1.3"/>
+        <circle cx="2.5" cy="10.5" r="1.5" stroke="white" stroke-width="1.3"/>
+        <line x1="9" y1="5" x2="13" y2="4" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="tb-title">Music<span>Guess</span></span>
+  </div>
+
+  <div class="tb-center">
+    <div id="update-pill" onclick="handlePillClick()">
+      <div class="pill-dot"></div>
+      <span id="pill-text">Update available</span>
+    </div>
+  </div>
+
+  <div class="tb-right">
+    <button class="tb-btn settings" onclick="window.api.openSettings()" title="Settings">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+        <circle cx="7.5" cy="7.5" r="2"/>
+        <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.9 2.9l1.1 1.1M11 11l1.1 1.1M11 4l1.1-1.1M2.9 12.1L4 11"/>
+      </svg>
+    </button>
+
+    <div class="tb-sep"></div>
+
+    <button class="tb-btn" onclick="window.api.minimize()" title="Minimize">
+      <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor">
+        <rect width="12" height="1.5" rx="0.75"/>
+      </svg>
+    </button>
+
+    <button class="tb-btn" onclick="window.api.maximize()" title="Maximize / Restore">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3">
+        <rect x="0.65" y="0.65" width="9.7" height="9.7" rx="1.5"/>
+      </svg>
+    </button>
+
+    <button class="tb-btn win-close" onclick="window.api.close()" title="Close">
+      <svg width="11" height="11" viewBox="0 0 11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="1" y1="1" x2="10" y2="10"/>
+        <line x1="10" y1="1" x2="1" y2="10"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="dl-bar"></div>
+</div>
+
+<webview id="game" src="https://musicguess.elartrios.net" allowpopups></webview>
+
+<script>
+  let updateDownloaded = false
+
+  const pill     = document.getElementById('update-pill')
+  const pillText = document.getElementById('pill-text')
+  const dlBar    = document.getElementById('dl-bar')
+
+  window.api.onUpdateStatus((d) => {
+    if (d.type === 'available') {
+      pillText.textContent = `Loading v${d.version}…`
+      pill.classList.add('show')
+      dlBar.classList.add('show')
+    }
+    else if (d.type === 'progress') {
+      dlBar.style.width = d.percent + '%'
+      pillText.textContent = `Downloading… ${d.percent}%`
+    }
+    else if (d.type === 'downloaded') {
+      updateDownloaded = true
+      dlBar.classList.remove('show')
+      pillText.textContent = '↺ Restart and install'
+      pill.classList.add('show')
+    }
+    else if (d.type === 'none' || d.type === 'error') {
+      pill.classList.remove('show')
+      dlBar.classList.remove('show')
+    }
+  })
+
+  function handlePillClick() {
+    if (updateDownloaded) window.api.installUpdate()
+  }
+</script>
+</body>
+</html>
